@@ -1565,7 +1565,7 @@ function drawAdmin(){
   $('favDel').onclick=()=>{E.favicon='';fvUp()};
   $('tiltOn').checked=E.tiltOn!==false;$('tiltOn').onchange=()=>{E.tiltOn=$('tiltOn').checked};
   const shUp=()=>{$('shPrev').style.backgroundImage=E.shareImg?`url(${E.shareImg})`:'';$('shPrev').textContent=E.shareImg?'':'ยังไม่มี'};shUp();
-  $('shFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;E.shareImg=await sqCrop(f).catch(()=>E.shareImg);e.target.value='';shUp();toast('ใส่รูปแล้ว กดบันทึกด้วยนะคะ')};
+  $('shFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;e.target.value='';toast('กำลังอัปรูป...');try{const d=await sqCrop(f);const b=await (await fetch(d)).blob();const fd=new FormData();fd.append('image',b,'share.jpg');const j=await (await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_KEY,{method:'POST',body:fd})).json();if(!j.data||!j.data.url)throw 0;E.shareImg=j.data.url;shUp();toast('ใส่รูปแล้ว กดบันทึกด้วยนะคะ')}catch(_){toast('อัปรูปไม่สำเร็จ ลองใหม่อีกครั้งค่ะ')}};
   $('shDel').onclick=()=>{E.shareImg='';shUp()};
   ['pcBody','pcEdge','pcScr','pcAcc'].forEach(k=>{$(k).value=E[k]||'#FFFFFF';$(k).oninput=()=>{E[k]=$(k).value;phoneColors($('phone'),E)}});
   $('pcOn').checked=!!E.pcOn;$('pcBox').style.opacity=E.pcOn?1:.45;$('pcOn').onchange=()=>{E.pcOn=$('pcOn').checked;$('pcBox').style.opacity=E.pcOn?1:.45;phoneColors($('phone'),E)};
