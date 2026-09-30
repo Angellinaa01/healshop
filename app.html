@@ -623,6 +623,8 @@ body.inadmin nav,body.inadmin .topbar{display:none}
   <div class="adm-top"><button id="backShop">← กลับหน้าร้าน</button><b>หลังบ้าน</b></div>
   <div class="in">
 
+    <div class="sec" style="padding:12px 18px"><div style="font-size:13px;color:var(--mute)">พื้นที่เก็บรูปในหลังบ้าน ใช้ไป <b id="szTx">0%</b></div><div style="height:8px;border-radius:9px;background:var(--line);margin-top:6px;overflow:hidden"><i id="szBar" style="display:block;height:100%;width:0;background:var(--rose3)"></i></div><div style="font-size:12px;color:var(--mute);margin-top:4px">ถ้าเกิน 90% จะบันทึกไม่ได้ ให้ลบรูปที่ไม่ใช้ หรืออัปแบนเนอร์ใหม่ (ระบบจะย่อให้เล็กลง)</div></div>
+
     <div class="sec"><h3>🌐 โลโก้ร้าน (ไอคอนบนแท็บเว็บ)</h3>
       <div style="display:flex;align-items:center;gap:14px">
         <div id="favPrev" style="width:64px;height:64px;border-radius:16px;background:var(--bg);display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 0 0 1.5px var(--line);font-size:26px">🌐</div>
@@ -857,7 +859,7 @@ const firebaseConfig = {
   messagingSenderId: "958295434421",
   appId: "1:958295434421:web:9ef1ee07b0f8a76d928afc"
 };
-const IMGBB_KEY = "ใส่ API key ของ ImgBB";
+const IMGBB_KEY = "76ef139d3f17b87132caf973740e9345";
 const ADMIN_PIN = "1234"; // เปลี่ยนก่อนใช้งาน
 // =========================
 
@@ -885,14 +887,14 @@ const TS=()=>LIVE?firebase.firestore.FieldValue.serverTimestamp():null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const toast=t=>{$('toast').textContent=t;$('toast').style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>$('toast').style.display='none',2200)};
-function shrink(f){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{
+function shrink(f,LIMK=800,MAXW=1080){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{
   // คงความคมของรูปแคปทุกขนาด: จำกัดแค่ความกว้าง แล้วลดคุณภาพทีละนิดจนไฟล์พอดีที่เก็บ (~800KB)
-  let w=Math.min(1080,im.width),h=Math.round(im.height*w/im.width),out='';const LIM=800*1024*1.37;
+  let w=Math.min(MAXW,im.width),h=Math.round(im.height*w/im.width),out='';const LIM=LIMK*1024*1.37;
   for(let t=0;t<8;t++){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(im,0,0,w,h);
     for(const q of [.9,.82,.74,.66,.58]){out=c.toDataURL('image/jpeg',q);if(out.length<LIM)return res(out)}
     w=Math.round(w*.85);h=Math.round(h*.85)}
   res(out)};im.onerror=rej;im.src=fr.result};fr.onerror=rej;fr.readAsDataURL(f)})}
-async function upload(f){if(/ใส่/.test(IMGBB_KEY))return shrink(f);const fd=new FormData();fd.append('image',f);
+async function upload(f,k,w){if(/ใส่/.test(IMGBB_KEY))return shrink(f,k,w);const fd=new FormData();fd.append('image',f);
   return (await (await fetch('https://api.imgbb.com/1/upload?key='+IMGBB_KEY,{method:'POST',body:fd})).json()).data?.url||''}
 
 const FONTS=['Itim','Mali','Sriracha','Kodchasan','Mitr','Kanit','Prompt','Sarabun','Bai Jamjuree','Chonburi'];
@@ -1417,7 +1419,7 @@ $('pinSave').onclick=()=>{const o=$('pinOld').value.trim(),n=$('pinNew').value.t
   if(!pinOk(o))return toast('รหัสเดิมไม่ถูกต้อง');
   if(!/^\d{4,6}$/.test(n))return toast('รหัสใหม่ต้องเป็นตัวเลข 4–6 หลัก');
   if(n!==n2)return toast('ยืนยันรหัสไม่ตรงกัน');
-  SHOP.set({pinHash:pinHash(n),pinLen:n.length},{merge:true}).then(()=>{$('pinOld').value=$('pinNew').value=$('pinNew2').value='';toast('เปลี่ยนรหัสแล้ว ✓ ครั้งหน้าใช้รหัสใหม่นะคะ')}).catch(e=>{console.error(e);toast('บันทึกไม่สำเร็จ: '+(e.code||e.message||''))})};
+  SHOP.set({pinHash:pinHash(n),pinLen:n.length},{merge:true}).then(()=>{$('pinOld').value=$('pinNew').value=$('pinNew2').value='';toast('เปลี่ยนรหัสแล้ว ✓ ครั้งหน้าใช้รหัสใหม่นะคะ')}).catch(e=>{console.error(e);toast(/invalid-argument|exceeds|size/i.test((e.code||'')+(e.message||''))?'บันทึกไม่สำเร็จ: รูปในหลังบ้านรวมกันใหญ่เกินไป ลองลบหรือเปลี่ยนรูปแบนเนอร์ใหม่':'บันทึกไม่สำเร็จ: '+(e.code||e.message||''))})};
 $('addCt').onclick=()=>{E.contactsList.push({icon:'🔗',img:'',name:'',link:''});drawAdmin()};
 // ---------- โต๊ะประกอบจี้ใหม่ ----------
 let N=null,NIx=0,NHist=[];
@@ -1534,7 +1536,7 @@ function drawAdmin(){
   $('ctRows').querySelectorAll('[data-cl]').forEach(el=>el.oninput=()=>E.contactsList[+el.dataset.cl].link=el.value);
   $('ctRows').querySelectorAll('[data-cx]').forEach(b=>b.onclick=()=>{E.contactsList.splice(+b.dataset.cx,1);drawAdmin()});
   $('ctRows').querySelectorAll('[data-cr]').forEach(b=>b.onclick=()=>{E.contactsList[+b.dataset.cr].img='';drawAdmin()});
-  $('ctRows').querySelectorAll('[data-ci]').forEach(el=>el.onchange=async()=>{const f=el.files[0];if(!f)return;toast('กำลังอัปโหลด…');const u=await upload(f).catch(()=>'');if(u)E.contactsList[+el.dataset.ci].img=u;drawAdmin();toast('อัปโหลดแล้ว กดบันทึกด้วยนะคะ')});
+  $('ctRows').querySelectorAll('[data-ci]').forEach(el=>el.onchange=async()=>{const f=el.files[0];if(!f)return;toast('กำลังอัปโหลด…');const u=await upload(f,30,240).catch(()=>'');if(u)E.contactsList[+el.dataset.ci].img=u;drawAdmin();toast('อัปโหลดแล้ว กดบันทึกด้วยนะคะ')});
   pick('pkCt',CTS.map((v,i)=>[v,'แบบ '+(i+1)]),'ctStyle',(v,n)=>`<div style="width:100%;pointer-events:none;text-align:left">${ctHTML([E.contactsList[0]||{icon:'💬',name:'LINE @shop',link:'#'}],v)}</div>${n}`);
   if(!window.fxP)window.fxP=makeFx($('fxPrev'));
   setTimeout(()=>fxP.set(E.eff),0);
@@ -1556,7 +1558,7 @@ function drawAdmin(){
   $('dnIcon').value=E.doneIcon||'';$('dnTitle').value=E.doneTitle||'';$('dnSub').value=E.doneSub||'';$('dnBtn').value=E.doneBtnTx||'';
   $('dnIcon').oninput=()=>{E.doneIcon=$('dnIcon').value;dnUp()};$('dnTitle').oninput=()=>{E.doneTitle=$('dnTitle').value;dnUp()};
   $('dnSub').oninput=()=>{E.doneSub=$('dnSub').value;dnUp()};$('dnBtn').oninput=()=>{E.doneBtnTx=$('dnBtn').value;dnUp()};
-  $('dnFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;toast('กำลังอัปโหลด…');E.doneImg=await upload(f).catch(()=>'')||E.doneImg;e.target.value='';dnUp();toast('อัปโหลดแล้ว กดบันทึกด้วยนะคะ')};
+  $('dnFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;toast('กำลังอัปโหลด…');E.doneImg=await upload(f,60,480).catch(()=>'')||E.doneImg;e.target.value='';dnUp();toast('อัปโหลดแล้ว กดบันทึกด้วยนะคะ')};
   $('dnDel').onclick=()=>{E.doneImg='';dnUp()};dnUp();
   const fvUp=()=>{$('favPrev').innerHTML=E.favicon?`<img src="${E.favicon}" style="width:100%;height:100%;object-fit:contain" alt="">`:'🌐'};fvUp();
   $('favFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;E.favicon=await iconify(f).catch(()=>E.favicon);e.target.value='';fvUp();$('favIco').href=E.favicon;toast('ใส่โลโก้แล้ว กดบันทึกด้วยนะคะ')};
@@ -1567,6 +1569,7 @@ function drawAdmin(){
   $('shDel').onclick=()=>{E.shareImg='';shUp()};
   ['pcBody','pcEdge','pcScr','pcAcc'].forEach(k=>{$(k).value=E[k]||'#FFFFFF';$(k).oninput=()=>{E[k]=$(k).value;phoneColors($('phone'),E)}});
   $('pcOn').checked=!!E.pcOn;$('pcBox').style.opacity=E.pcOn?1:.45;$('pcOn').onchange=()=>{E.pcOn=$('pcOn').checked;$('pcBox').style.opacity=E.pcOn?1:.45;phoneColors($('phone'),E)};
+  {const n=new Blob([JSON.stringify(E)]).size,pc=Math.min(100,Math.round(n/1048576*100));$('szTx').textContent=pc+'%';$('szBar').style.width=pc+'%';$('szBar').style.background=pc>=90?'#E5506E':'var(--rose3)'}
   $('themeList').innerHTML=THEME_KEYS.map(([k,n,,d])=>`<div class="colrow" style="justify-content:space-between"><span style="font-size:14px">${n}</span><input type="color" data-tk="${k}" value="${E.theme[k]||d}"></div>`).join('');
   $('themeList').querySelectorAll('[data-tk]').forEach(el=>el.oninput=()=>{E.theme[el.dataset.tk]=el.value;applyTheme(E.theme)});
   $('themeReset').onclick=()=>{E.theme={};applyTheme(E.theme);drawAdmin()};
@@ -1582,10 +1585,10 @@ function drawAdmin(){
   setAv($('avPrev'),E.avatar,$('aCName').value||E.name);
 }
 $('aName').oninput=drawAdmin;$('aWbText').oninput=drawAdmin;$('aWbIcon').oninput=drawAdmin;
-$('bFile').onchange=async e=>{toast('กำลังอัปโหลด…');for(const f of e.target.files){const u=await upload(f).catch(()=>'');if(u)E.banners.push(u)}e.target.value='';drawAdmin();toast('อัปโหลดแล้ว กดบันทึกด้วยนะคะ')};
-$('avFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;toast('กำลังอัปโหลด…');E.avatar=await upload(f).catch(()=>'')||E.avatar;e.target.value='';drawAdmin();toast('อัปโหลดแล้ว กดบันทึกด้วยนะคะ')};
+$('bFile').onchange=async e=>{toast('กำลังอัปโหลด…');for(const f of e.target.files){const u=await upload(f,140,900).catch(()=>'');if(u)E.banners.push(u)}e.target.value='';drawAdmin();toast('อัปโหลดแล้ว กดบันทึกด้วยนะคะ')};
+$('avFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;toast('กำลังอัปโหลด…');E.avatar=await upload(f,30,240).catch(()=>'')||E.avatar;e.target.value='';drawAdmin();toast('อัปโหลดแล้ว กดบันทึกด้วยนะคะ')};
 $('avDel').onclick=()=>{E.avatar='';drawAdmin()};
-$('chFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;toast('กำลังอัปโหลด…');E.charm.img=await upload(f).catch(()=>'')||E.charm.img;e.target.value='';drawAdmin();toast('อัปโหลดแล้ว กดบันทึกด้วยนะคะ')};
+$('chFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;toast('กำลังอัปโหลด…');E.charm.img=await upload(f,60,480).catch(()=>'')||E.charm.img;e.target.value='';drawAdmin();toast('อัปโหลดแล้ว กดบันทึกด้วยนะคะ')};
 $('chDel').onclick=()=>{E.charm.img='';drawAdmin()};
 const SEC={
   top:()=>({tbIcon:$('aTbIcon').value.trim()||'🎀',tbText:$('aTbText').value.trim()||'Welcome',tbRun:!!E.tbRun,tbStyle:E.tbStyle,fTop:E.fTop,tbSpeed:+$('aSpeed').value}),
