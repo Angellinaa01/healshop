@@ -1,0 +1,15 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/share.jpg"
+  to = "/.netlify/functions/og"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/"
+  to = "/.netlify/functions/page"
+  status = 200
+  force = true
